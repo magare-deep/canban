@@ -1,0 +1,41 @@
+{
+  "users": [
+    {
+      "id": "usr_admin_1",
+      "name": "Alex Morgan",
+      "email": "admin@company.com",
+      "password": "$2a$10$y5/V6VjsaMLtBrqp5fgWmurSZDZmoXrx8FOYLngX1DidLQSjjDRbW",
+      "role": "admin",
+      "title": "Engineering Director",
+      "department": "Operations & Tech",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
+      "createdAt": "2026-08-05T17:22:54.430Z"
+    },
+    {
+      "id": "usr_emp_1",
+      "name": "Jordan Lee",
+      "email": "employee@company.com",
+      "password": "$2a$10$zHv.j8VuDDptcbu3rwkxwezsX21OASf4qzCqaCnnc/sCkIXlKtvxe",
+      "role": "user",
+      "title": "Senior Frontend Developer",
+      "department": "Product Development",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=256",
+      "createdAt": "2026-08-05T17:22:54.431Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "tsk_1",
+      "title": "Finalize Mobile Responsive Navigation Component",
+      "description": "Ensure touch targets are >44px, hamburger sidebar drawer animates smoothly.",
+      "status": "in_progress",
+      "priority": "high",
+      "category": "Frontend",
+      "assigneeId": "usr_emp_1",
+      "dueDate": "2026-08-06",
+      "estimatedHours": 4,
+      "loggedHours": 2.5,
+      "createdAt": "2026-08-05T17:22:54.431Z"
+    }
+  ]
+}
