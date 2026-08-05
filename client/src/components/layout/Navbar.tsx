@@ -30,7 +30,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Calendar History State
+  // Dynamic Date calculation
   const todayStr = new Date().toISOString().split('T')[0];
   const [historyDate, setHistoryDate] = useState(todayStr);
   const [historicalTasks, setHistoricalTasks] = useState<Task[]>([]);
@@ -41,13 +41,34 @@ export const Navbar: React.FC<NavbarProps> = () => {
     navigate('/login');
   };
 
-  // Fetch historical tasks for chosen date
+  // Helper for matching historical dates
+  const isMatchDate = (taskDueDate?: string | null, targetDateStr?: string) => {
+    if (!taskDueDate || !targetDateStr) return false;
+    if (taskDueDate === targetDateStr) return true;
+    try {
+      const parsed = new Date(taskDueDate);
+      if (isNaN(parsed.getTime())) return false;
+      return parsed.toISOString().split('T')[0] === targetDateStr;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  // Fetch historical tasks from Supabase database for chosen date
   const fetchTasksForDate = async (targetDate: string) => {
     try {
       setLoadingHistory(true);
       const res = await apiFetch<{ success: boolean; tasks: Task[] }>('/tasks');
-      if (res.success && res.tasks) {
-        const filtered = res.tasks.filter(t => t.dueDate === targetDate);
+      if (res.success && Array.isArray(res.tasks)) {
+        const filtered = res.tasks.filter(t => {
+          if (!t) return false;
+          // Non-admin users see their own past tasks in history
+          if (user?.role !== 'admin') {
+            const isMyTask = t.assigneeId === user?.id || t.assignee?.id === user?.id || t.assignee?.email?.toLowerCase() === user?.email?.toLowerCase();
+            if (!isMyTask) return false;
+          }
+          return isMatchDate(t.dueDate, targetDate);
+        });
         setHistoricalTasks(filtered);
       }
     } catch (err) {
@@ -97,14 +118,16 @@ export const Navbar: React.FC<NavbarProps> = () => {
         <div className="flex items-center gap-2 sm:gap-3 ml-auto">
           
           {/* Admin Dashboard Quick Access Button */}
-          <Link
-            to="/admin/employees"
-            className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-300 font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
-            title="Admin Control Panel"
-          >
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Admin Panel</span>
-          </Link>
+          {user?.role === 'admin' && (
+            <Link
+              to="/admin/employees"
+              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/80 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-300 font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+              title="Admin Control Panel"
+            >
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Admin Panel</span>
+            </Link>
+          )}
 
           {/* Calendar Task History Button */}
           <button 
@@ -168,14 +191,16 @@ export const Navbar: React.FC<NavbarProps> = () => {
                   </div>
 
                   <div className="py-1">
-                    <Link
-                      to="/admin/employees"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      <ShieldCheck className="w-4 h-4 text-blue-500" />
-                      Admin Control Panel
-                    </Link>
+                    {user?.role === 'admin' && (
+                      <Link
+                        to="/admin/employees"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-blue-500" />
+                        Admin Control Panel
+                      </Link>
+                    )}
 
                     <Link
                       to="/profile"
@@ -203,20 +228,20 @@ export const Navbar: React.FC<NavbarProps> = () => {
         </div>
       </div>
 
-      {/* Calendar History Modal Popup */}
+      {/* Calendar Task History Modal Popup */}
       {calendarOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fade-in overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 w-full max-w-lg border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 my-auto max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 w-full max-w-lg border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 my-auto max-h-[85vh] overflow-hidden flex flex-col">
             
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 sticky top-0 bg-white dark:bg-slate-900 z-10">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 bg-white dark:bg-slate-900">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                   <CalendarIcon className="w-5 h-5" />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">Previous Task History</h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Pick any date to view archived tasks</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Pick any past date to view archived tasks stored in database</p>
                 </div>
               </div>
               <button
@@ -239,7 +264,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
             </div>
 
             {/* Task List for Selected Historical Date */}
-            <div className="space-y-3">
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               <h3 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
                 Tasks Recorded for {historyDate === todayStr ? 'Today' : historyDate} ({historicalTasks.length}):
               </h3>
@@ -251,10 +276,10 @@ export const Navbar: React.FC<NavbarProps> = () => {
                 </div>
               ) : historicalTasks.length === 0 ? (
                 <div className="py-8 text-center bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4">
-                  <p className="text-xs text-slate-400 italic">No tasks recorded for date {historyDate}.</p>
+                  <p className="text-xs text-slate-400 italic">No tasks recorded in database for date {historyDate}.</p>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div className="space-y-2">
                   {historicalTasks.map((t, idx) => (
                     <div key={t.id} className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-between gap-3">
                       <div className="flex items-start gap-2">
